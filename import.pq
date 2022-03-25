@@ -40,16 +40,8 @@ in in_p),
     #"Added Custom4" = Table.AddColumn(#"Reordered Columns", "origin", each if [product_origin] <> null and [product_origin] <> "" then Text.Proper(Text.Combine(List.Distinct(List.RemoveNulls(List.Transform(Text.Split([product_origin],"#(lf)"),Text.Trim))),"#(lf)")) else null),
     #"Reordered Columns1" = Table.ReorderColumns(#"Added Custom4",{"project.Id", "Banner", "Season", "Week", "page", "position", "product_origin", "origin", "copy", "price_a", "price_b", "image_org", "Count", "Data"}),
     #"Removed Columns6" = Table.RemoveColumns(#"Reordered Columns1",{"product_origin"}),
-    #"Added Custom5" = Table.AddColumn(#"Removed Columns6", "zones_org", each Text.Combine(List.Distinct(Table.Column([Data],"tab")),",")),
-    #"Added Custom7" = Table.AddColumn(#"Added Custom5", "in_nfld", each let 
-b=[Banner],
-y=[Season],
-w=[Week],
-p=[page],
-po=[position] 
-in if Text.Contains([zones_org],"MARM") and Text.Contains([zones_org],"NFLD")=false then
-Table.RowCount(Table.SelectRows(nfld,each [Banner]=b and[Season]=y and [Week]=w and [page]=p and [position]=po )) else 0),
-    zones = Table.AddColumn(#"Added Custom7", "zones", each getZones([zones_org],[Banner],[in_nfld])),
+    zones_org = Table.AddColumn(#"Removed Columns6", "zones_org", each Text.Combine(List.Distinct(Table.Column([Data],"tab")),",")),
+    zones = Table.AddColumn(zones_org, "zones", each getZones([zones_org],[Banner])),
     #"Added Custom8" = Table.AddColumn(zones, "item_number", each Text.Combine(List.Distinct(List.Select(Text.Split(Text.Replace(Text.Combine(Table.Column([Data],"itemnumber"),"#(lf)"),",","#(lf)"),"#(lf)"),each _ <> "" and _ <> null)),",")),
     #"Reordered Columns2" = Table.ReorderColumns(#"Added Custom8",{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "price_a", "price_b", "item_number", "image_org", "Count", "Data", "zones_org", "in_nfld", "zones"}),
     #"Added Custom9" = Table.AddColumn(#"Reordered Columns2", "offer_type", each Text.Combine(List.Distinct(Table.Column([Data],"offer_type")),",")),
