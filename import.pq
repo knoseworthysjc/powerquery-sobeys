@@ -20,20 +20,8 @@ p = if [#"price/lb"] <> null then [#"price/kg"] else null,
 l = if p <> null then Text.Combine(List.Sort(List.Distinct(List.Transform(Text.Split(p,","),Text.Trim))),",") else null
 in l),
     #"Removed Columns" = Table.RemoveColumns(price_b,{"image1", "image2", "image3", "image4", "image5", "image6", "image7"}),
-    #"Added Custom13" = Table.AddColumn(#"Removed Columns", "new_offertype", each let 
-p= if [#"price/non-weight_uom"] <> null then [#"price/non-weight_uom"]
-else if [#"price/100g"] <> null then [#"price/100g"] else if [#"price/lb"] <> null then [#"price/lb"] else [#"price/kg"],
-l = if p <> null then Text.Trim(Text.Combine(List.Sort(List.Distinct(List.RemoveNulls(List.Select(List.Transform(Text.Split(p,","),Text.Trim),each _ <> "")))),",")) else null,
-r = Text.Lower([rewards_points]),
-in_p = try if Text.Contains(r,"buy") and Text.Contains(r,"get") then "bogo"
-else if Text.Contains(p,"/") and Text.Contains(r,"pay") = false then "Multi_Buy"
-else if Text.Contains(r,"pay") then "bmsm"
-else if Text.Contains(r,"%") or Text.Contains(r,"off") then "Save %%"
-else if Text.Contains(l,"/ea") then "price" 
-else if [#"price/100g"] <> null and [#"price/100g"] <> "" then "price/100g"
-else Text.Replace(Text.Lower([offer_type]),"price/kg","pricelb") otherwise Text.Replace(Text.Lower([offer_type]),"price/kg","pricelb")
-in in_p),
-    #"Grouped Rows" = Table.Group(#"Added Custom13", {"project.Id", "page", "position", "product_origin", "offer_copy", "price_a", "price_b", "image_org", "Banner", "Season", "Week"}, {{"Count", each Table.RowCount(_), Int64.Type}, {"Data", each _, type table [file=text, project=text, project.Id=text, tab=text, docket=nullable text, Banner=nullable text, Season=any, Week=any, promo_start=nullable date, promo_end=nullable date, project.1=nullable text, page=any, folio=nullable number, position=nullable number, itemnumber=nullable text, category=nullable text, product_origin=nullable text, offer_copy=nullable text, offer_layout=any, offer_type=nullable text, #"price/kg"=nullable text, #"price/lb"=nullable text, #"price/100g"=any, #"price/non-weight_uom"=nullable text, rewards_points=nullable text, assigned_logo=nullable text, assigned_icon=nullable text, instructions=nullable text, image_org=text, price_a=nullable text, price_b=nullable text]}}),
+    offer_type = Table.AddColumn(#"Removed Columns", "new_offertype", each getOfferType([offer_type], [#"price/non-weight_uom"], [#"price/100g"], [#"price/lb"], [#"price/kg"], [rewards_points])),
+    #"Grouped Rows" = Table.Group(offer_type, {"project.Id", "page", "position", "product_origin", "offer_copy", "price_a", "price_b", "image_org", "Banner", "Season", "Week"}, {{"Count", each Table.RowCount(_), Int64.Type}, {"Data", each _, type table [file=text, project=text, project.Id=text, tab=text, docket=nullable text, Banner=nullable text, Season=any, Week=any, promo_start=nullable date, promo_end=nullable date, project.1=nullable text, page=any, folio=nullable number, position=nullable number, itemnumber=nullable text, category=nullable text, product_origin=nullable text, offer_copy=nullable text, offer_layout=any, offer_type=nullable text, #"price/kg"=nullable text, #"price/lb"=nullable text, #"price/100g"=any, #"price/non-weight_uom"=nullable text, rewards_points=nullable text, assigned_logo=nullable text, assigned_icon=nullable text, instructions=nullable text, image_org=text, price_a=nullable text, price_b=nullable text]}}),
     #"Added Custom3" = Table.AddColumn(#"Grouped Rows", "copy", each if [offer_copy] <> null and [offer_copy] <> "" then Text.Proper(Text.Combine(List.Distinct(List.RemoveNulls(List.Transform(Text.Split([offer_copy],"#(lf)"),Text.Trim))),"#(lf)")) else null),
     #"Removed Columns4" = Table.RemoveColumns(#"Added Custom3",{"offer_copy"}),
     #"Reordered Columns" = Table.ReorderColumns(#"Removed Columns4",{"project.Id", "Banner", "Season", "Week", "page", "position", "product_origin", "copy", "price_a", "price_b", "image_org", "Count", "Data"}),
@@ -41,11 +29,11 @@ in in_p),
     #"Reordered Columns1" = Table.ReorderColumns(#"Added Custom4",{"project.Id", "Banner", "Season", "Week", "page", "position", "product_origin", "origin", "copy", "price_a", "price_b", "image_org", "Count", "Data"}),
     #"Removed Columns6" = Table.RemoveColumns(#"Reordered Columns1",{"product_origin"}),
     zones_org = Table.AddColumn(#"Removed Columns6", "zones_org", each Text.Combine(List.Distinct(Table.Column([Data],"tab")),",")),
-    zones = Table.AddColumn(zones_org, "zones", each getZones([zones_org],[Banner])),
+    zones = Table.AddColumn(zones_org, "zones", each getZones([zones_org], [Banner], [page], [position])),
     #"Added Custom8" = Table.AddColumn(zones, "item_number", each Text.Combine(List.Distinct(List.Select(Text.Split(Text.Replace(Text.Combine(Table.Column([Data],"itemnumber"),"#(lf)"),",","#(lf)"),"#(lf)"),each _ <> "" and _ <> null)),",")),
-    #"Reordered Columns2" = Table.ReorderColumns(#"Added Custom8",{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "price_a", "price_b", "item_number", "image_org", "Count", "Data", "zones_org", "in_nfld", "zones"}),
+    #"Reordered Columns2" = Table.ReorderColumns(#"Added Custom8",{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "price_a", "price_b", "item_number", "image_org", "Count", "Data", "zones_org", "zones"}),
     #"Added Custom9" = Table.AddColumn(#"Reordered Columns2", "offer_type", each Text.Combine(List.Distinct(Table.Column([Data],"offer_type")),",")),
-    #"Reordered Columns3" = Table.ReorderColumns(#"Added Custom9",{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "offer_type", "price_a", "price_b", "item_number", "image_org", "Count", "Data", "zones_org", "in_nfld", "zones"}),
+    #"Reordered Columns3" = Table.ReorderColumns(#"Added Custom9",{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "offer_type", "price_a", "price_b", "item_number", "image_org", "Count", "Data", "zones_org", "zones"}),
     #"Added Custom10" = Table.AddColumn(#"Reordered Columns3", "rewards_points", each try Text.Trim(Text.Split(Text.Combine(List.Distinct(List.Select(List.Transform(Table.Column([Data],"rewards_points"),each Text.Replace(_,"#(lf)","-")), each _ <> "" and _ <> null)),"#(lf)"),"-"){1}) otherwise null),
     #"Added Custom11" = Table.AddColumn(#"Added Custom10", "instructions", each Text.Combine(List.Distinct(Table.Column([Data],"instructions")),"#(lf)")),
     Images = Table.AddColumn(#"Added Custom11", "images", each getImages(Text.Split([image_org],"#(lf)"))),
