@@ -26,7 +26,7 @@ in l),
     banner = Table.AddColumn(#"Grouped Rows", "Banner", each [Data]{0}[Banner]),
     #"Added Custom1" = Table.AddColumn(banner, "Season", each [Data]{0}[Season]),
     #"Added Custom2" = Table.AddColumn(#"Added Custom1", "Week", each [Data]{0}[Week]),
-    #"Added Custom3" = Table.AddColumn(#"Added Custom2", "copy", each if [offer_copy] <> null and [offer_copy] <> "" then Text.Proper(Text.Combine(List.Distinct(List.RemoveNulls(List.Transform(Text.Split([offer_copy],"#(lf)"),Text.Trim))),"#(lf)")) else null),
+    #"Added Custom3" = Table.AddColumn(#"Added Custom2", "copy", each if [offer_copy] <> null and [offer_copy] <> "" then Text.Combine(List.Distinct(List.RemoveNulls(List.Transform(Text.Split([offer_copy],"#(lf)"),Text.Trim))),"#(lf)")else null),
     offer_type_org = Table.AddColumn(#"Added Custom3", "offer_type", each Text.Combine(List.Distinct(Table.Column([Data],"new_offertype")),",")),
     #"Removed Columns4" = Table.RemoveColumns(offer_type_org,{"offer_copy"}),
     #"Reordered Columns" = Table.ReorderColumns(#"Removed Columns4",{"project.Id", "Banner", "Season", "Week", "page", "position", "product_origin", "copy", "price_a", "price_b", "image_org","Data"}),
@@ -38,7 +38,7 @@ in l),
     item_number = Table.AddColumn(zones, "item_number", each Text.Combine(List.Distinct(List.Select(Text.Split(Text.Replace(Text.Combine(Table.Column([Data],"itemnumber"),"#(lf)"),",","#(lf)"),"#(lf)"),each _ <> "" and _ <> null)),",")),
     #"Reordered Columns2" = Table.ReorderColumns(item_number,{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "price_a", "price_b", "item_number", "image_org", "Data", "zones_org", "zones"}),
     #"Reordered Columns3" = Table.ReorderColumns(#"Reordered Columns2",{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "price_a", "price_b", "item_number", "image_org", "Data", "zones_org", "zones"}),
-    rewards = Table.AddColumn(#"Reordered Columns3", "rewards_points_new", each try Text.Trim(Text.Split(Text.Combine(List.Distinct(List.Select(List.Transform(Table.Column([Data],"rewards_points"),each Text.Replace(_,"#(lf)","-")), each _ <> "" and _ <> null)),"#(lf)"),"-"){1}) otherwise null),
+    rewards = Table.AddColumn(#"Reordered Columns3", "rewards_points_new", each [rewards_points]),
     #"Added Custom11" = Table.AddColumn(rewards, "instructions", each Text.Combine(List.Distinct(Table.Column([Data],"instructions")),"#(lf)")),
     Images = Table.AddColumn(#"Added Custom11", "images", each getImages(Text.Split([image_org],"#(lf)"))),
     #"Added Index" = Table.AddIndexColumn(Images, "Index", 0, 1, Int64.Type),
@@ -49,10 +49,10 @@ in l),
     offer_copy = Table.AddColumn(#"Added Custom17", "new_offer_copy", each getOfferCopy([copy],[origin],[zones])),
     #"Reordered Columns4" = Table.ReorderColumns(offer_copy,{"project.Id", "Banner", "Season", "Week", "page", "position", "rewards_points", "origin", "copy", "new_offer_copy", "price_a", "price_b", "offer_type", "rewards_points_new", "item_number", "image_org", "Data", "zones_org", "zones", "instructions", "images", "Index", "assigned_logo", "assigned_icon", "category"}),
     #"Removed Columns7" = Table.RemoveColumns(#"Reordered Columns4",{"rewards_points"}),
-    #"Added Custom" = Table.AddColumn(#"Removed Columns7", "offer_copy_orgin", each if [origin]=null or [origin] ="" then [new_offer_copy] else if List.Count(Text.Split([origin],";")) = 2 then 
+    offer_copy_orgin = Table.AddColumn(#"Removed Columns7", "offer_copy_orgin", each if [origin]=null or [origin] ="" or Text.Contains(Text.Upper([new_offer_copy]),"PRODUCT OF") then [new_offer_copy] else if List.Count(Text.Split([origin],";")) = 2 then 
 getOfferCopyOrigin([new_offer_copy],Text.Split([origin],";"){0},Text.Split([origin],";"){1}) 
 else getOfferCopyOrigin([new_offer_copy],[origin],null)),
-    #"Reordered Columns5" = Table.ReorderColumns(#"Added Custom",{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "new_offer_copy", "offer_copy_orgin", "price_a", "price_b", "offer_type", "rewards_points_new", "item_number", "image_org", "Data", "zones_org", "zones", "instructions", "images", "Index", "assigned_logo", "assigned_icon", "category"}),
+    #"Reordered Columns5" = Table.ReorderColumns(offer_copy_orgin,{"project.Id", "Banner", "Season", "Week", "page", "position", "origin", "copy", "new_offer_copy", "offer_copy_orgin", "price_a", "price_b", "offer_type", "rewards_points_new", "item_number", "image_org", "Data", "zones_org", "zones", "instructions", "images", "Index", "assigned_logo", "assigned_icon", "category"}),
     #"Removed Columns8" = Table.RemoveColumns(#"Reordered Columns5",{"new_offer_copy"})
 in
     #"Removed Columns8"
